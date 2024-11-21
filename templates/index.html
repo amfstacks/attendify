@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+    <title>Dynamic Image Editor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+</head>
+<body>
+    <h1>Dynamic Image Uploader</h1>
+
+    <!-- Canvas to display the template and uploaded image -->
+    <canvas id="designCanvas" style="border: 1px solid #ccc;"></canvas>
+    
+    <!-- File upload for user's image -->
+    <input type="file" id="userImage" accept="image/*">
+    <button id="makeCircle">Make Image Circular</button>
+    <button id="deleteButton">Delete Selected Image</button>
+    <button id="saveButton">Save Design</button>
+
+    <script>
+        const canvas = new fabric.Canvas('designCanvas');
+
+        // Dynamically resize canvas to fit template dimensions
+        fabric.Image.fromURL('/static/template.png', function(templateImg) {
+            canvas.setWidth(templateImg.width);
+            canvas.setHeight(templateImg.height);
+            templateImg.selectable = false; // Make the template non-editable
+            canvas.add(templateImg);
+            canvas.sendToBack(templateImg);
+        });
+
+        let uploadedImage; // Keep track of the uploaded image object
+
+        // Handle image upload and add it to the canvas
+        document.getElementById('userImage').addEventListener('change', function(e) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                fabric.Image.fromURL(event.target.result, function(img) {
+                    // Crop the image to a square based on its smaller dimension
+                    const minDim = Math.min(img.width, img.height); // Find the smaller dimension
+                    img.cropX = (img.width - minDim) / 2; // Crop equally from the left and right
+                    img.cropY = (img.height - minDim) / 2; // Crop equally from the top and bottom
+                    img.width = minDim;
+                    img.height = minDim;
+
+                    // Resize the image to fit a circular area
+                    img.scale(0.3); // Adjust the scale (tweak if needed)
+                    img.set({
+                        left: 200, // Default position
+                        top: 200,
+                        cornerSize: 10,
+                        hasRotatingPoint: true,
+                    });
+                    canvas.add(img);
+                    canvas.setActiveObject(img); // Set as active
+                });
+            };
+            reader.readAsDataURL(e.target.files[0]);
+        });
+
+        // Make the uploaded image circular
+        document.getElementById('makeCircle').addEventListener('click', function() {
+            const activeObject = canvas.getActiveObject(); // Get the selected object
+            if (!activeObject) {
+                alert('Please select an image to make circular!');
+                return;
+            }
+
+            // Apply a circular clipping mask
+            const radius = Math.min(
+                activeObject.width * activeObject.scaleX,
+                activeObject.height * activeObject.scaleY
+            ) / 0.6;
+
+            const clipCircle = new fabric.Circle({
+                radius: radius,
+                originX: 'center',
+                originY: 'center',
+                left: 0,
+                top: 0,
+            });
+
+            activeObject.clipPath = clipCircle;
+            canvas.renderAll();
+        });
+
+        // Delete the selected image
+        document.getElementById('deleteButton').addEventListener('click', function() {
+            const activeObject = canvas.getActiveObject(); // Get the selected object
+            if (!activeObject) {
+                alert('Please select an image to delete!');
+                return;
+            }
+
+            // Remove the selected object from the canvas
+            canvas.remove(activeObject);
+            canvas.discardActiveObject(); // Clear the selection
+            canvas.renderAll();
+        });
+
+        // Save the final design
+        document.getElementById('saveButton').addEventListener('click', function() {
+            const dataURL = canvas.toDataURL('image/png'); // Export canvas as an image
+            fetch('/save', {
+                method: 'POST',
+                body: JSON.stringify({ image: dataURL }),
+                headers: { 'Content-Type': 'application/json' }
+            }).then(response => response.blob())
+              .then(blob => {
+                  // Create a downloadable link for the user
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = 'final_design.png';
+                  link.click();
+              });
+        });
+    </script>
+</body>
+</html>
