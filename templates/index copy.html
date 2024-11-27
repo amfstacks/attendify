@@ -14,8 +14,8 @@
     <input type="file" id="userImage" accept="image/*">
     <button id="makeCircle">Make Image Circular</button>
     <button id="deleteButton">Delete Selected Image</button>
-    <button id="saveButton">Save Design</button><br>
-    <input type="text" id="textInput" placeholder="Type your text here" style="width: 200px;">
+    <button id="saveButton">Save Design</button>
+
     <script>
         const canvas = new fabric.Canvas('designCanvas');
 
@@ -29,7 +29,6 @@
         });
 
         let uploadedImage; // Keep track of the uploaded image object
-        let dynamicText;
 
         // Handle image upload and add it to the canvas
         document.getElementById('userImage').addEventListener('change', function(e) {
@@ -83,28 +82,7 @@
             activeObject.clipPath = clipCircle;
             canvas.renderAll();
         });
-        document.getElementById('textInput').addEventListener('input', function() {
-            const textInput = document.getElementById('textInput').value.toUpperCase();
 
-            // If there's no dynamic text object yet, create it
-            if (!dynamicText) {
-                dynamicText = new fabric.Text(textInput, {
-                    left: canvas.width - 150,  // Position the text near the right edge
-                    top: canvas.height - 200,
-                    fontFamily: 'Arial',
-                    fontSize: 24,
-                    fill: 'black',
-                    originX: 'center',
-                    originY: 'center',
-                });
-
-                canvas.add(dynamicText); // Add the text to the canvas
-            } else {
-                // Update the existing text object with the new value
-                dynamicText.set({ text: textInput });
-                canvas.renderAll(); // Re-render the canvas to reflect changes
-            }
-        });
         // Delete the selected image
         document.getElementById('deleteButton').addEventListener('click', function() {
             const activeObject = canvas.getActiveObject(); // Get the selected object
