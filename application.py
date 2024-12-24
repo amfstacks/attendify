@@ -1,98 +1,108 @@
-from flask import Flask, request, render_template, send_file, redirect, url_for, jsonify
+from flask import Flask, request, render_template, send_file, redirect, url_for, jsonify, flash
 import base64
 import io
 import os
 from PIL import Image
-import random  
+import random
 import json
 
 app = Flask(__name__)
+app.secret_key = 'your_secure_secret_key'  # Replace with a secure key in production
 
-REGIONS_FILE = 'regions.json'
+# Paths
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REGIONS_FILE = os.path.join(BASE_DIR, 'regions.json')
+STATIC_DIR = os.path.join(BASE_DIR, 'static')
+PUBLIC_DIR = os.path.join(BASE_DIR, 'public')
+TEMPLATE_IMAGE = os.path.join(STATIC_DIR, 'template.png')
 
+# Ensure necessary directories exist
+os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs(PUBLIC_DIR, exist_ok=True)
+
+# Initialize regions.json if it doesn't exist
 if not os.path.exists(REGIONS_FILE):
     with open(REGIONS_FILE, 'w') as f:
         json.dump([], f, indent=4)
 
-# Serve the HTML template
-@app.route('/')
-def upload_form():
-    return render_template('index.html')
-
+# Admin Interface
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if request.method == 'POST':
-        # Receive the base image and regions data
+        # Handle base image upload
         base_image = request.files.get('base_image')
-        regions_data = request.form.get('regions')
-
         if base_image:
-            base_image_path = os.path.join('static', 'template.png')
-            base_image.save(base_image_path)
+            base_image.save(TEMPLATE_IMAGE)
+            flash('Base image uploaded successfully!', 'success')
 
+        # Handle regions data
+        regions_data = request.form.get('regions')
         if regions_data:
-            # Save regions data to a JSON file
-            with open(REGIONS_FILE, 'w') as f:
-                json.dump(json.loads(regions_data), f)
+            try:
+                regions = json.loads(regions_data)
+                if len(regions) > 1:
+                    flash('Only one region is allowed. Please define exactly one region.', 'danger')
+                else:
+                    with open(REGIONS_FILE, 'w') as f:
+                        json.dump(regions, f, indent=4)
+                    flash('Region saved successfully!', 'success')
+            except json.JSONDecodeError:
+                flash('Invalid JSON data for regions.', 'danger')
 
         return redirect(url_for('admin'))
 
-    # Load existing regions if available
-    regions = []
-    if os.path.exists(REGIONS_FILE):
+    # Load existing regions
+    try:
         with open(REGIONS_FILE, 'r') as f:
             regions = json.load(f)
+    except json.JSONDecodeError:
+        regions = []
+        flash('regions.json contains invalid JSON. Resetting to empty.', 'danger')
+        with open(REGIONS_FILE, 'w') as f:
+            json.dump(regions, f, indent=4)
 
     return render_template('admin.html', regions=regions)
 
+# User Interface
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-@app.route('/regions.json')
-def get_regions():
-    REGIONS_FILE = 'regions.json'  # Ensure this path is correct
-    if os.path.exists(REGIONS_FILE):
-        try:
-            with open(REGIONS_FILE, 'r') as f:
-                regions = json.load(f)
-        except json.JSONDecodeError:
-            regions = []
-            print("Error: regions.json contains invalid JSON.")
-    else:
-        regions = []
-        print("Warning: regions.json does not exist. Initializing with empty list.")
-        with open(REGIONS_FILE, 'w') as f:
-            json.dump(regions, f, indent=4)
-    return jsonify(regions)
-
-# Save the final design from the canvas
+# Save Composite Design
 @app.route('/save', methods=['POST'])
 def save_design():
     data = request.get_json()
-    image_data = data['image'].split(",")[1]  # Remove the data:image/png;base64 prefix
-    decoded_image = base64.b64decode(image_data)
-    image = Image.open(io.BytesIO(decoded_image))
-    
-    # # Save the final image
-    # output_path = "final_design.png"
-    # image.save(output_path)
+    if not data or 'image' not in data:
+        return jsonify({'error': 'No image data provided.'}), 400
 
-    # # Return the saved image as a response
-    # return send_file(output_path, mimetype='image/png', as_attachment=True)
-    random_filename = f"{random.randint(100000, 999999)}.png"
-    save_path = os.path.join("public", random_filename)
+    try:
+        # Decode the base64 image
+        image_data = data['image'].split(",")[1]
+        decoded_image = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(decoded_image)).convert("RGBA")
 
-    # Ensure the directory exists
-    os.makedirs("public", exist_ok=True)
-    
-    # Save the image to the server
-    image.save(save_path)
+        # Generate a random filename
+        random_filename = f"{random.randint(100000, 999999)}.png"
+        save_path = os.path.join(PUBLIC_DIR, random_filename)
 
-    # Save the image to a BytesIO buffer for download
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    buffer.seek(0)
+        # Save the image
+        image.save(save_path)
 
-    return send_file(save_path, mimetype='image/png', as_attachment=True)
+        # Send the image as a downloadable file
+        return send_file(save_path, mimetype='image/png', as_attachment=True, download_name='attendify_design.png')
+    except Exception as e:
+        print(f"Error saving design: {e}")
+        return jsonify({'error': 'Failed to save the design.'}), 500
 
+# Serve regions.json
+@app.route('/regions.json')
+def get_regions():
+    try:
+        with open(REGIONS_FILE, 'r') as f:
+            regions = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        regions = []
+    return jsonify(regions)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

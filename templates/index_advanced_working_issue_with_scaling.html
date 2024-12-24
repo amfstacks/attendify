@@ -128,9 +128,9 @@
     let userImageObj = null;
     let dynamicText;
 
-    // Function to load predefined regions
+    // Function to load predefined regions and visualize them
     function loadRegions() {
-        fetch('/regions.json')  // Fetch regions data
+        fetch('/regions.json')  // Fetch from the correct route
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -142,7 +142,20 @@
                 console.log('Loaded Regions:', regions);
                 if (regions.length === 1) {
                     const region = regions[0];
-                    // No visualization to avoid stroke visibility
+                    // Optional: Visualize the region (for debugging)
+
+                    // const circle = new fabric.Circle({
+                    //     left: region.left,
+                    //     top: region.top,
+                    //     radius: region.radius,
+                    //     fill: 'rgba(255, 0, 0, 0.2)', // Semi-transparent for visibility
+                    //     stroke: '#FF0000',
+                    //     strokeWidth: 1,
+                    //     selectable: false,
+                    //     evented: false
+                    // });
+                    // canvas.add(circle);
+
                 } else {
                     alert('No regions defined by the admin.');
                 }
@@ -172,57 +185,45 @@
             const userImg = new Image();
             userImg.src = event.target.result;
             userImg.onload = function() {
-                // Crop the image to a square based on its smaller dimension
-                const minDim = Math.min(userImg.width, userImg.height); // Find the smaller dimension
-                const cropX = (userImg.width - minDim) / 2; // Crop equally from the left and right
-                const cropY = (userImg.height - minDim) / 2; // Crop equally from the top and bottom
-
-                const croppedCanvas = document.createElement('canvas');
-                croppedCanvas.width = minDim;
-                croppedCanvas.height = minDim;
-                const ctx = croppedCanvas.getContext('2d');
-                ctx.drawImage(userImg, cropX, cropY, minDim, minDim, 0, 0, minDim, minDim);
-                const croppedDataURL = croppedCanvas.toDataURL('image/png');
-
-                // Create Fabric.js Image from cropped DataURL
-                fabric.Image.fromURL(croppedDataURL, function(croppedFabricImg) {
-                    // Remove existing user image if any
-                    if (userImageObj) {
-                        canvas.remove(userImageObj);
-                    }
-
-                    // Check if regions are loaded
-                    if (regions.length === 1) {
-                        const region = regions[0];
-                        const regionDiameter = region.radius * 2;
-                        const scale = regionDiameter / croppedFabricImg.width;
-
-                        // Set the image properties
-                        croppedFabricImg.set({
-                            left: region.left,
-                            top: region.top,
-                            originX: 'center',
-                            originY: 'center',
-                            scaleX: scale,
-                            scaleY: scale,
-                            selectable: false, // Keep image non-selectable
-                            hasControls: false,
-                            hasBorders: false,
-                            clipPath: new fabric.Circle({
-                                radius: (region.radius / scale) *1,
-                                originX: 'center',
-                                originY: 'center'
-                            })
-                        });
-
-                        // Add the image to the canvas
-                        canvas.add(croppedFabricImg);
-                        userImageObj = croppedFabricImg;
-                        canvas.renderAll();
-                    } else {
-                        alert('No regions defined by the admin.');
-                    }
+                const fabricImg = new fabric.Image(userImg);
+                fabricImg.set({
+                    originX: 'center',
+                    originY: 'center',
+                    selectable: false,
+                    hasControls: false,
+                    hasBorders: false
                 });
+
+                // Remove existing user image if any
+                if (userImageObj) {
+                    canvas.remove(userImageObj);
+                }
+
+                // Check if regions are loaded
+                if (regions.length === 1) {
+                    const region = regions[0];
+
+                    // Calculate scaling factor to cover the entire circle
+                    const scale = Math.max((region.radius * 2) / fabricImg.width, (region.radius * 2) / fabricImg.height);
+
+                    fabricImg.set({
+                        left: region.left,
+                        top: region.top,
+                        // scaleX: scale,
+                        // scaleY: scale,
+                        clipPath: new fabric.Circle({
+                            radius: region.radius,
+                            originX: 'center',
+                            originY: 'center'
+                        })
+                    });
+
+                    canvas.add(fabricImg);
+                    userImageObj = fabricImg;
+                    canvas.renderAll();
+                } else {
+                    alert('No regions defined by the admin.');
+                }
             }
         }
         reader.readAsDataURL(file);
@@ -234,24 +235,17 @@
 
         // If there's no dynamic text object yet, create it
         if (!dynamicText) {
-            dynamicText = new fabric.Textbox(textInput, { // Use Textbox for better control
+            dynamicText = new fabric.Text(textInput, {
                 left: canvas.width / 2,  // Center horizontally
-                top: canvas.height - 100, // Position near the bottom
+                top: canvas.height - 100, // Adjust as needed
                 fontFamily: 'Arial',
                 fontSize: 24,
                 fill: 'black',
                 originX: 'center',
                 originY: 'center',
-                selectable: true, // Make the text selectable
-                hasControls: true, // Enable controls for scaling
-                hasBorders: true,
-                cornerColor: 'blue',
-                cornerSize: 8,
-                transparentCorners: false
             });
 
             canvas.add(dynamicText); // Add the text to the canvas
-            canvas.setActiveObject(dynamicText); // Set as active for immediate manipulation
         } else {
             // Update the existing text object with the new value
             dynamicText.set({ text: textInput });
@@ -264,13 +258,6 @@
         if (!userImageObj) {
             alert('Please upload an image before downloading.');
             return;
-        }
-
-        const activeObject = canvas.getActiveObject();
-        if (activeObject && activeObject.type === 'textbox') {
-            // Optionally, deselect the text to finalize its position before saving
-            canvas.discardActiveObject();
-            canvas.renderAll();
         }
 
         const dataURL = canvas.toDataURL('image/png'); // Export canvas as an image

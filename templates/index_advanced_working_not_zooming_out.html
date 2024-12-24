@@ -194,22 +194,32 @@
                     // Check if regions are loaded
                     if (regions.length === 1) {
                         const region = regions[0];
-                        const regionDiameter = region.radius * 2;
-                        const scale = regionDiameter / croppedFabricImg.width;
 
-                        // Set the image properties
+                        // Calculate scaling factor to cover the entire circle
+                        const scale = Math.max((region.radius * 2) / croppedFabricImg.width, (region.radius * 2) / croppedFabricImg.height);
+
+
+                        const minDim = Math.min(croppedFabricImg.width, croppedFabricImg.height);
+                        croppedFabricImg.cropX = (croppedFabricImg.width - minDim) / 2; // Crop equally from the left and right
+                        croppedFabricImg.cropY = (croppedFabricImg.height - minDim) / 2; // Crop equally from the top and bottom
+                        croppedFabricImg.width = minDim;
+                        croppedFabricImg.height = minDim;
+                        // croppedFabricImg.scale(0.3);
+
+
+
                         croppedFabricImg.set({
                             left: region.left,
                             top: region.top,
                             originX: 'center',
                             originY: 'center',
-                            scaleX: scale,
-                            scaleY: scale,
-                            selectable: false, // Keep image non-selectable
+                            // scaleX: scale,
+                            // scaleY: scale,
+                            selectable: false,
                             hasControls: false,
                             hasBorders: false,
                             clipPath: new fabric.Circle({
-                                radius: (region.radius / scale) *1,
+                                radius: region.radius,
                                 originX: 'center',
                                 originY: 'center'
                             })
@@ -234,7 +244,7 @@
 
         // If there's no dynamic text object yet, create it
         if (!dynamicText) {
-            dynamicText = new fabric.Textbox(textInput, { // Use Textbox for better control
+            dynamicText = new fabric.Text(textInput, {
                 left: canvas.width / 2,  // Center horizontally
                 top: canvas.height - 100, // Position near the bottom
                 fontFamily: 'Arial',
@@ -242,16 +252,12 @@
                 fill: 'black',
                 originX: 'center',
                 originY: 'center',
-                selectable: true, // Make the text selectable
-                hasControls: true, // Enable controls for scaling
-                hasBorders: true,
-                cornerColor: 'blue',
-                cornerSize: 8,
-                transparentCorners: false
+                selectable: false,
+                hasControls: false,
+                hasBorders: false
             });
 
             canvas.add(dynamicText); // Add the text to the canvas
-            canvas.setActiveObject(dynamicText); // Set as active for immediate manipulation
         } else {
             // Update the existing text object with the new value
             dynamicText.set({ text: textInput });
@@ -264,13 +270,6 @@
         if (!userImageObj) {
             alert('Please upload an image before downloading.');
             return;
-        }
-
-        const activeObject = canvas.getActiveObject();
-        if (activeObject && activeObject.type === 'textbox') {
-            // Optionally, deselect the text to finalize its position before saving
-            canvas.discardActiveObject();
-            canvas.renderAll();
         }
 
         const dataURL = canvas.toDataURL('image/png'); // Export canvas as an image
