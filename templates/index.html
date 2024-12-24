@@ -1,140 +1,325 @@
 <!doctype html>
 <html>
 <head>
-    <title>Church Of Christ Kado 23rd Annual lectureship Attendify App</title>
+    <title>Attendify App</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        /* (Your existing CSS styles) */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            font-weight: 100;
+        }
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 6px 10px;
+            font-size: 16px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        label {
+            font-size: 16px;
+            display: block;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        button i {
+            font-size: 18px;
+        }
+
+        /* Hover effect for buttons */
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Save Button Styling */
+        #saveButton {
+            background-color: #28a745;
+        }
+
+        /* Hover effect for save button */
+        #saveButton:hover {
+            background-color: #218838;
+        }
+
+        /* Make Circular Button Styling */
+        #makeCircle {
+            background-color: #ffc107;
+        }
+
+        /* Hover effect for make circle button */
+        #makeCircle:hover {
+            background-color: #e0a800;
+        }
+
+        /* Delete Button Styling */
+        #deleteButton {
+            background-color: #dc3545;
+        }
+
+        /* Hover effect for delete button */
+        #deleteButton:hover {
+            background-color: #c82333;
+        }
+        #textInput {
+            width: 250px;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            background-color: #fff;
+        }
+        .input-container {
+            /* display: flex; */
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            /* margin-bottom: 20px; */
+        }
+
+        /* Label for file input */
+        label {
+            font-size: 16px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* File input styling */
+        #userImage {
+            margin-bottom: 15px;
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            width: 300px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Church Of Christ Kado 23rd Annual lectureship Attendify App</h1>
+<center> <h1>Church Of Christ Kado 23rd Annual Lectureship Attendify App</h1>
+</center>
 
-    <!-- Canvas to display the template and uploaded image -->
+<center>
+    <div class="input-container">
+        <div style="
+        display: inline-block;
+    ">
+            <label for="userImage">Choose your picture</label>
+            <input type="file" id="userImage" accept="image/*">
+        </div>
+        <input type="text" id="textInput" placeholder="Type your name here">
+    </div>
+</center>
+<div class="button-container">
+    <!-- You can remove these buttons since positioning is predefined -->
+    <!-- <button id="makeCircle"><i class="fas fa-crop"></i> Make Image Circular</button>
+    <button id="deleteButton"><i class="fas fa-trash-alt"></i>Delete Selected Image</button> -->
+    <button id="saveButton"> <i class="fas fa-save"></i> Download Design</button></div>
+
+<!-- Canvas to display the template and uploaded image -->
+<center>
     <canvas id="designCanvas" style="border: 1px solid #ccc;"></canvas>
-    
-    <!-- File upload for user's image -->
-    <input type="file" id="userImage" accept="image/*">
-    <button id="makeCircle">Make Image Circular</button>
-    <button id="deleteButton">Delete Selected Image</button>
-    <button id="saveButton">Save Design</button><br>
-    <input type="text" id="textInput" placeholder="Type your text here" style="width: 200px;">
-    <script>
-        const canvas = new fabric.Canvas('designCanvas');
+</center>
 
-        // Dynamically resize canvas to fit template dimensions
-        fabric.Image.fromURL('/static/template.png', function(templateImg) {
-            canvas.setWidth(templateImg.width);
-            canvas.setHeight(templateImg.height);
-            templateImg.selectable = false; // Make the template non-editable
-            canvas.add(templateImg);
-            canvas.sendToBack(templateImg);
-        });
+<!-- File upload for user's image -->
 
-        let uploadedImage; // Keep track of the uploaded image object
-        let dynamicText;
+<script>
+    const canvas = new fabric.Canvas('designCanvas');
 
-        // Handle image upload and add it to the canvas
-        document.getElementById('userImage').addEventListener('change', function(e) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                fabric.Image.fromURL(event.target.result, function(img) {
-                    // Crop the image to a square based on its smaller dimension
-                    const minDim = Math.min(img.width, img.height); // Find the smaller dimension
-                    img.cropX = (img.width - minDim) / 2; // Crop equally from the left and right
-                    img.cropY = (img.height - minDim) / 2; // Crop equally from the top and bottom
-                    img.width = minDim;
-                    img.height = minDim;
+    // Load the base image
+    fabric.Image.fromURL('/static/template.png', function(templateImg) {
+        canvas.setWidth(templateImg.width);
+        canvas.setHeight(templateImg.height);
+        templateImg.selectable = false; // Make the template non-editable
+        canvas.add(templateImg);
+        canvas.sendToBack(templateImg);
+        loadRegions();
+    });
 
-                    // Resize the image to fit a circular area
-                    img.scale(0.3); // Adjust the scale (tweak if needed)
-                    img.set({
-                        left: 200, // Default position
-                        top: 200,
-                        cornerSize: 10,
-                        hasRotatingPoint: true,
+    let dynamicText;
+
+    // Function to load predefined regions and place user images
+    function loadRegions() {
+        fetch('/regions.json')
+            .then(response => response.json())
+            .then(regions => {
+                regions.forEach((region, index) => {
+                    // Add a placeholder circle (optional)
+                    /*
+                    const circle = new fabric.Circle({
+                        left: region.left,
+                        top: region.top,
+                        radius: region.radius,
+                        fill: 'rgba(0, 0, 0, 0)', // Transparent
+                        stroke: '#000',
+                        strokeWidth: 1,
+                        selectable: false,
+                        evented: false
                     });
-                    canvas.add(img);
-                    canvas.setActiveObject(img); // Set as active
+                    canvas.add(circle);
+                    */
+
+                    // Store region data as metadata
+                    canvas.add(new fabric.Rect({
+                        left: region.left - region.radius,
+                        top: region.top - region.radius,
+                        width: region.radius * 2,
+                        height: region.radius * 2,
+                        fill: 'transparent',
+                        selectable: false,
+                        evented: false,
+                        hasBorders: false,
+                        hasControls: false,
+                        metadata: {
+                            type: 'userImage',
+                            region: region
+                        }
+                    }));
                 });
-            };
-            reader.readAsDataURL(e.target.files[0]);
-        });
+            })
+            .catch(err => console.log('No regions defined.'));
+    }
 
-        // Make the uploaded image circular
-        document.getElementById('makeCircle').addEventListener('click', function() {
-            const activeObject = canvas.getActiveObject(); // Get the selected object
-            if (!activeObject) {
-                alert('Please select an image to make circular!');
-                return;
-            }
-
-            // Apply a circular clipping mask
-            const radius = Math.min(
-                activeObject.width * activeObject.scaleX,
-                activeObject.height * activeObject.scaleY
-            ) / 0.6;
-
-            const clipCircle = new fabric.Circle({
-                radius: radius,
-                originX: 'center',
-                originY: 'center',
-                left: 0,
-                top: 0,
+    // Fetch regions data from the server
+    fetch('/regions.json')
+        .then(response => response.json())
+        .then(regions => {
+            regions.forEach((region, index) => {
+                // Optionally, visualize regions on the user side
+                /*
+                const circle = new fabric.Circle({
+                    left: region.left,
+                    top: region.top,
+                    radius: region.radius,
+                    fill: 'rgba(255, 0, 0, 0.2)',
+                    stroke: '#FF0000',
+                    strokeWidth: 1,
+                    selectable: false,
+                    evented: false
+                });
+                canvas.add(circle);
+                */
             });
+        })
+        .catch(err => console.log('No regions found.'));
 
-            activeObject.clipPath = clipCircle;
-            canvas.renderAll();
-        });
-        document.getElementById('textInput').addEventListener('input', function() {
-            const textInput = document.getElementById('textInput').value.toUpperCase();
+    let regions = [];
 
-            // If there's no dynamic text object yet, create it
-            if (!dynamicText) {
-                dynamicText = new fabric.Text(textInput, {
-                    left: canvas.width - 150,  // Position the text near the right edge
-                    top: canvas.height - 200,
-                    fontFamily: 'Arial',
-                    fontSize: 24,
-                    fill: 'black',
+    // Load regions from the server
+    fetch('/regions.json')
+        .then(response => response.json())
+        .then(data => {
+            regions = data;
+        })
+        .catch(err => console.log('Regions not found.'));
+
+    // Handle image upload and add it to the predefined region
+    document.getElementById('userImage').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const userImg = new Image();
+            userImg.src = event.target.result;
+            userImg.onload = function() {
+                const fabricImg = new fabric.Image(userImg);
+                fabricImg.set({
                     originX: 'center',
                     originY: 'center',
+                    selectable: false,
+                    hasControls: false,
+                    hasBorders: false
                 });
 
-                canvas.add(dynamicText); // Add the text to the canvas
-            } else {
-                // Update the existing text object with the new value
-                dynamicText.set({ text: textInput });
-                canvas.renderAll(); // Re-render the canvas to reflect changes
+                // For simplicity, place the image in the first available region
+                if (regions.length > 0) {
+                    const region = regions[0]; // Modify as needed for multiple regions
+                    fabricImg.set({
+                        left: region.left,
+                        top: region.top,
+                        radius: region.radius,
+                        scaleX: (region.radius * 2) / fabricImg.width,
+                        scaleY: (region.radius * 2) / fabricImg.height,
+                        clipPath: new fabric.Circle({
+                            radius: region.radius,
+                            originX: 'center',
+                            originY: 'center'
+                        })
+                    });
+                    canvas.add(fabricImg);
+                } else {
+                    alert('No regions defined by the admin.');
+                }
             }
-        });
-        // Delete the selected image
-        document.getElementById('deleteButton').addEventListener('click', function() {
-            const activeObject = canvas.getActiveObject(); // Get the selected object
-            if (!activeObject) {
-                alert('Please select an image to delete!');
-                return;
-            }
+        }
+        reader.readAsDataURL(e.target.files[0]);
+    });
 
-            // Remove the selected object from the canvas
-            canvas.remove(activeObject);
-            canvas.discardActiveObject(); // Clear the selection
-            canvas.renderAll();
-        });
+    // Handle name input
+    document.getElementById('textInput').addEventListener('input', function() {
+        const textInput = document.getElementById('textInput').value.toUpperCase();
 
-        // Save the final design
-        document.getElementById('saveButton').addEventListener('click', function() {
-            const dataURL = canvas.toDataURL('image/png'); // Export canvas as an image
-            fetch('/save', {
-                method: 'POST',
-                body: JSON.stringify({ image: dataURL }),
-                headers: { 'Content-Type': 'application/json' }
-            }).then(response => response.blob())
-              .then(blob => {
-                  // Create a downloadable link for the user
-                  const link = document.createElement('a');
-                  link.href = URL.createObjectURL(blob);
-                  link.download = 'final_design.png';
-                  link.click();
-              });
-        });
-    </script>
+        // If there's no dynamic text object yet, create it
+        if (!dynamicText) {
+            dynamicText = new fabric.Text(textInput, {
+                left: canvas.width - 150,  // Position the text near the right edge
+                top: canvas.height - 200,
+                fontFamily: 'Arial',
+                fontSize: 24,
+                fill: 'black',
+                originX: 'center',
+                originY: 'center',
+            });
+
+            canvas.add(dynamicText); // Add the text to the canvas
+        } else {
+            // Update the existing text object with the new value
+            dynamicText.set({ text: textInput });
+            canvas.renderAll(); // Re-render the canvas to reflect changes
+        }
+    });
+
+    // Save the final design
+    document.getElementById('saveButton').addEventListener('click', function() {
+        const dataURL = canvas.toDataURL('image/png'); // Export canvas as an image
+        fetch('/save', {
+            method: 'POST',
+            body: JSON.stringify({ image: dataURL }),
+            headers: { 'Content-Type': 'application/json' }
+        }).then(response => response.blob())
+            .then(blob => {
+                // Create a downloadable link for the user
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'kado_lectureship_attend.png';
+                link.click();
+            });
+    });
+</script>
 </body>
 </html>

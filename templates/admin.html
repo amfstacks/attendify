@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+    <title>Admin - Attendify App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+        }
+        #canvasContainer {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+        }
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            font-size: 16px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #regionsData {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<h1>Admin Panel - Set Up Regions</h1>
+<form id="adminForm" method="POST" enctype="multipart/form-data">
+    <div style="text-align: center;">
+        <label for="baseImage">Upload Base Image:</label>
+        <input type="file" id="baseImage" name="base_image" accept="image/*" required>
+    </div>
+    <div id="canvasContainer">
+        <canvas id="adminCanvas" width="800" height="600"></canvas>
+    </div>
+    <div class="controls">
+        <button type="button" id="addRegion">Add Circular Region</button>
+        <button type="submit">Save Configuration</button>
+    </div>
+    <input type="hidden" id="regionsData" name="regions">
+</form>
+
+<script>
+    const canvas = new fabric.Canvas('adminCanvas');
+    let baseImage = null;
+
+    // Load existing base image if available
+    fetch('/static/template.png')
+        .then(response => {
+            if (response.ok) {
+                return response.blob();
+            }
+            throw new Error('No existing base image.');
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            fabric.Image.fromURL(url, function(img) {
+                baseImage = img;
+                canvas.setWidth(img.width);
+                canvas.setHeight(img.height);
+                img.selectable = false;
+                canvas.add(img);
+                canvas.sendToBack(img);
+            });
+        })
+        .catch(err => console.log(err));
+
+    // Handle base image upload
+    document.getElementById('baseImage').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const imgObj = new Image();
+            imgObj.src = event.target.result;
+            imgObj.onload = function () {
+                const img = new fabric.Image(imgObj);
+                baseImage && canvas.remove(baseImage);
+                baseImage = img;
+                canvas.clear();
+                canvas.setWidth(img.width);
+                canvas.setHeight(img.height);
+                img.selectable = false;
+                canvas.add(img);
+                canvas.sendToBack(img);
+            }
+        }
+        reader.readAsDataURL(e.target.files[0]);
+    });
+
+    // Add circular region
+    document.getElementById('addRegion').addEventListener('click', function() {
+        const circle = new fabric.Circle({
+            radius: 50,
+            fill: 'rgba(0, 123, 255, 0.3)',
+            stroke: '#007BFF',
+            strokeWidth: 2,
+            hasRotatingPoint: false,
+            lockRotation: true,
+            originX: 'center',
+            originY: 'center'
+        });
+        canvas.add(circle);
+        canvas.setActiveObject(circle);
+    });
+
+    // Serialize regions data before submitting the form
+    document.getElementById('adminForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const regions = [];
+        canvas.getObjects('circle').forEach(circle => {
+            regions.push({
+                left: circle.left,
+                top: circle.top,
+                radius: circle.radius * circle.scaleX // Assuming uniform scaling
+            });
+        });
+        document.getElementById('regionsData').value = JSON.stringify(regions);
+        this.submit();
+    });
+
+    // Load existing regions
+    const existingRegions = {{ regions|tojson }};
+    if (existingRegions.length > 0) {
+        existingRegions.forEach(region => {
+            const circle = new fabric.Circle({
+                left: region.left,
+                top: region.top,
+                radius: region.radius,
+                fill: 'rgba(0, 123, 255, 0.3)',
+                stroke: '#007BFF',
+                strokeWidth: 2,
+                hasRotatingPoint: false,
+                lockRotation: true
+            });
+            canvas.add(circle);
+        });
+    }
+</script>
+</body>
+</html>
